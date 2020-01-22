@@ -30,7 +30,7 @@ steps:
     inputs:
       targetType: "inline"
       script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
-  - task: Pester@0
+  - task: Pester@8
     inputs:
       scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='$(azure_resource_group_name)'}}"
       resultsFile: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
@@ -49,7 +49,7 @@ steps:
       csmParametersFile: "server.parameters.json"
       deploymentMode: "Incremental"
       deploymentOutputs: "arm_output"
-  - task: Pester@0
+  - task: Pester@8
     inputs:
       scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{ArmDeploymentJsonOutput='$(arm_output)'}}"
       resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
