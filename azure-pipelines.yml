@@ -15,11 +15,11 @@ variables:
   - name: azure_resource_group_name
     value: "ServerProvisionTesting-$(Build.BuildId)"
   - name: subscription_id
-    value: "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+    value: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
   - name: application_id
-    value: "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+    value: "8ce2d5ed-2d10-4dd0-a703-c380c8e15500"
   - name: tenant_id
-    value: "XXXXXXXXXXXXXXXXXXXXXXXXXX"
+    value: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
 
 steps:
   - task: PowerShell@2
@@ -29,7 +29,7 @@ steps:
   - task: PowerShell@2
     inputs:
       targetType: "inline"
-      script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location eastus -Force
+      script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
   - task: Pester@0
     inputs:
       scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='$(azure_resource_group_name)'}}"
@@ -43,7 +43,7 @@ steps:
       subscriptionId: "$(subscription_id)"
       action: "Create Or Update Resource Group"
       resourceGroupName: $(azure_resource_group_name)
-      location: "East US"
+      location: "UK South"
       templateLocation: "Linked artifact"
       csmFile: "server.json"
       csmParametersFile: "server.parameters.json"
@@ -58,7 +58,7 @@ steps:
   - task: PowerShell@2
     inputs:
       targetType: "inline"
-      script: Get-AzResourceGroup -Name $(azure_resource_group_name) | Remove-AzResourceGroup -Force
+      script: Get-AzResourceGroup -Name $(azure_resource_group_name) 
   - task: PublishTestResults@2
     inputs:
       testResultsFormat: "NUnit"
