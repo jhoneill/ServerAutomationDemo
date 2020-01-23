@@ -2,10 +2,6 @@ trigger:
   branches:
     include:
       - master
-  paths:
-    include:
-      - server.json
-      - server.parameters.json
 
 pool:
   vmImage: "ubuntu-latest"
@@ -59,6 +55,7 @@ steps:
       usePSCore: true
       run32Bit: False
   - task: PowerShell@2
+    displayName: "Get contents of $(azure_resource_group_name)"
     inputs:
       targetType: "inline"
       script: Get-AzResourceGroup -Name $(azure_resource_group_name) 
