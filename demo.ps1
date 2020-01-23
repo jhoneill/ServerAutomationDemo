@@ -1,15 +1,14 @@
 #region Var setup
-$resourceGroupName = 'ServerAutomationDemo'
-$region = 'XXXXXXX'
-$localVMAdminPw = 'I like azure.' ## a single password for demo purposes
-$projectName = 'ServerAutomationDemo' ## common term used through set up
-
-$subscriptionName = 'XXXXXXXXXX'
-$subscriptionId = 'XXXXXXXX'
-$tenantId = 'XXXXXXX'
-$orgName = 'adbertram'
-$gitHubRepoUrl = "https://github.com/$orgName/<repo name>"
-
+$projectName       = 'ServerAutomationDemo' ## common term used through set up
+$subscriptionName  = 'XXXXXXXXXX'
+$subscriptionId    = 'XXXXXXXX'
+$tenantId          = 'XXXXXXX'
+$region            = 'XXXXXXX'
+$resourceGroupName = $projectName
+$azDevOpsOrgName   = 'adbertram'
+$GitHubAccountName = $azDevOpsOrgName
+$localVMAdminPw    = 'I like azure.' ## a single password for demo purposes
+$gitHubRepoUrl     = "https://github.com/$GitHubAccountName/$projectName"
 #endregion
 
 #region Login
@@ -18,7 +17,7 @@ az account set --subscription $subscriptionName
 #endregion
 
 #region Install the Azure CLI DevOps extension
-az devops configure --defaults organization=https://dev.azure.com/$orgName
+az devops configure --defaults organization=https://dev.azure.com/$azDevOpsOrgName
 #endregion
 
 #region Create the resource group to put everything in
