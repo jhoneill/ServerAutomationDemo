@@ -49,6 +49,7 @@ steps:
       deploymentMode: "Incremental"
       deploymentOutputs: "arm_output"
   - task: Pester@0
+    displayName: "Test Deployment results"
     inputs:
       scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{ArmDeploymentJsonOutput='$(arm_output)'}}"
       resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"

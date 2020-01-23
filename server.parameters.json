@@ -15,9 +15,6 @@
         },
         "vm1Name": {
             "value": "TESTVMDEPLOY1"
-        },
-        "vm2Name": {
-            "value": "TESTVMDEPLOY1"
         }
     }
 }
