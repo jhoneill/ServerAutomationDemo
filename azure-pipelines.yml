@@ -23,14 +23,17 @@ variables:
 
 steps:
   - task: PowerShell@2
+    displayName: "Connect to Azure"
     inputs:
       filePath: "connect-azure.ps1"
       arguments: '-ServicePrincipalPassword "$(ServerAutomationDemo-AppPw)" -SubscriptionId $(subscription_id) -ApplicationId $(application_id) -TenantId $(tenant_id)'
   - task: PowerShell@2
+    displayName: "Create Resource Group '$(azure_resource_group_name)'"
     inputs:
       targetType: "inline"
       script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
   - task: Pester@0
+    displayName: "Test Valid template"
     inputs:
       scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='$(azure_resource_group_name)'}}"
       resultsFile: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
