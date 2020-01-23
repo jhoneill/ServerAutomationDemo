@@ -30,14 +30,14 @@
                 "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version."
             }
         },
-        "vmSize": {
+        "vm1size": {
             "type": "string",
             "defaultValue": "Standard_A2_v2",
             "metadata": {
                 "description": "Size of the virtual machine."
             }
         },
-        "vmName": {
+        "vm1Name": {
             "type": "string",
             "metadata": {
                 "description": "Name of the virtual machine."
@@ -52,35 +52,37 @@
         }
     },
     "variables": {
-        "nicName": "[parameters('vmName')]",
-        "addressPrefix": "10.0.0.0/16",
-        "subnetName": "Subnet",
-        "subnetPrefix": "10.0.0.0/24",
-        "publicIPAddressName": "[concat(parameters('vmName'),'-',uniquestring(resourceGroup().id))]",
-        "publicIpDnsLabelPrefix": "[toLower(concat(parameters('vmName'),'-',uniquestring(resourceGroup().id)))]",
-        "virtualNetworkName": "MyVNET",
-        "subnetRef": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnetName'))]",
-        "networkSecurityGroupName": "default-NSG"
+        "vm1nicName":                               "[parameters('vm1Name')]",
+        "vm1publicIPAddressName":            "[concat(parameters('vm1Name'),'-',uniquestring(resourceGroup().id))]",
+        "vm1publicIpDnsLabelPrefix": "[toLower(concat(parameters('vm1Name'),'-',uniquestring(resourceGroup().id)))]",
+        "networkSecurityGroupName":  "default-NSG",
+        "virtualNetworkName":        "MyVNET",
+        "addressPrefix":             "10.0.0.0/16",
+        "subnet1Name":               "Subnet1",
+        "subnet1Prefix":             "10.0.0.0/24",
+        "subnet1Ref":                "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('virtualNetworkName'), variables('subnet1Name'))]",
+        "subnet2Name":               "Subnet2",
+        "subnet2Prefix":             "10.0.1.0/24"
     },
     "resources": [
         {
-            "type": "Microsoft.Network/publicIPAddresses",
+            "type":       "Microsoft.Network/publicIPAddresses",
+            "name":       "[variables('vm1publicIPAddressName')]",
+            "location":   "[parameters('location')]",
             "apiVersion": "2018-11-01",
-            "name": "[variables('publicIPAddressName')]",
-            "location": "[parameters('location')]",
             "properties": {
                 "publicIPAllocationMethod": "Dynamic",
                 "dnsSettings": {
-                    "domainNameLabel": "[variables('publicIpDnsLabelPrefix')]"
+                    "domainNameLabel": "[variables('vm1publicIpDnsLabelPrefix')]"
                 }
             }
         },
         {
-            "comments": "Default Network Security Group for template",
-            "type": "Microsoft.Network/networkSecurityGroups",
+            "type":       "Microsoft.Network/networkSecurityGroups",
+            "name":       "[variables('networkSecurityGroupName')]",
+            "comments":   "Default Network Security Group",
+            "location":   "[parameters('location')]",
             "apiVersion": "2019-08-01",
-            "name": "[variables('networkSecurityGroupName')]",
-            "location": "[parameters('location')]",
             "properties": {
                 "securityRules": [
                     {
@@ -101,9 +103,9 @@
         },
         {
             "type": "Microsoft.Network/virtualNetworks",
-            "apiVersion": "2018-11-01",
             "name": "[variables('virtualNetworkName')]",
             "location": "[parameters('location')]",
+            "apiVersion": "2018-11-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
             ],
@@ -115,9 +117,18 @@
                 },
                 "subnets": [
                     {
-                        "name": "[variables('subnetName')]",
+                        "name": "[variables('subnet1Name')]",
                         "properties": {
-                            "addressPrefix": "[variables('subnetPrefix')]",
+                            "addressPrefix": "[variables('subnet1Prefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[variables('subnet2Name')]",
+                        "properties": {
+                            "addressPrefix": "[variables('subnet2Prefix')]",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
                             }
@@ -129,10 +140,10 @@
         {
             "type": "Microsoft.Network/networkInterfaces",
             "apiVersion": "2018-11-01",
-            "name": "[variables('nicName')]",
+            "name": "[variables('vm1nicName')]",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses/', variables('vm1publicIPAddressName'))]",
                 "[resourceId('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
             ],
             "properties": {
@@ -142,10 +153,10 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses/',variables('publicIPAddressName'))]"
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses/',variables('vm1publicIPAddressName'))]"
                             },
                             "subnet": {
-                                "id": "[variables('subnetRef')]"
+                                "id": "[variables('subnet1Ref')]"
                             }
                         }
                     }
@@ -155,14 +166,14 @@
         {
             "type": "Microsoft.Compute/virtualMachines",
             "apiVersion": "2018-10-01",
-            "name": "[parameters('vmName')]",
+            "name": "[parameters('vm1Name')]",
             "location": "[parameters('location')]",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
+                "[resourceId('Microsoft.Network/networkInterfaces/', variables('vm1nicName'))]"
             ],
             "properties": {
                 "hardwareProfile": {
-                    "vmSize": "[parameters('vmSize')]"
+                    "vmSize": "[parameters('vm1size')]"
                 },
                 "osProfile": {
                     "computerName": "[parameters('location')]",
@@ -183,7 +194,7 @@
                 "networkProfile": {
                     "networkInterfaces": [
                         {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('nicName'))]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',variables('vm1nicName'))]"
                         }
                     ]
                 }
@@ -193,7 +204,7 @@
     "outputs": {
         "hostname": {
             "type": "string",
-            "value": "[reference(variables('publicIPAddressName')).dnsSettings.fqdn]"
+            "value": "[reference(variables('vm1publicIPAddressName')).dnsSettings.fqdn]"
         }
     }
 }

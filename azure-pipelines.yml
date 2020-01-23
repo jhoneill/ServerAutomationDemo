@@ -13,7 +13,7 @@ pool:
 variables:
   - group: ServerAutomationDemo
   - name: azure_resource_group_name
-    value: "ServerProvisionTesting-212"
+    value: "ServerProvisionTesting-$(Build.BuildId)"
   - name: subscription_id
     value: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
   - name: application_id
