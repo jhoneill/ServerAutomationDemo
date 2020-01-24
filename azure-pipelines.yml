@@ -23,19 +23,39 @@ steps:
     inputs:
       filePath: "connect-azure.ps1"
       arguments: '-ServicePrincipalPassword "$(ServerAutomationDemo-AppPw)" -SubscriptionId $(subscription_id) -ApplicationId $(application_id) -TenantId $(tenant_id)'
-  - task: PowerShell@2
-    displayName: "Create Resource Group '$(azure_resource_group_name)'"
-    inputs:
-      targetType: "inline"
-      script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
   - task: Pester@0
-    displayName: "Test Valid template"
+    displayName: "Check Template syntax"
+    inputs:
+      scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/jsonValidation.tests.ps1'; Parameters=@{TemplatePath='.\\server.json'}}"
+      resultsFile: "$(System.DefaultWorkingDirectory)/jsonValidation.tests.XML"
+      usePSCore: true
+      run32Bit: False
+  - task: PublishTestResults@2
+    displayName: "Publish result (1)"
+    inputs:
+      testResultsFormat: "NUnit"
+      testResultsFiles: "$(System.DefaultWorkingDirectory)/jsonValidation.tests.XML"
+      failTaskOnFailedTests: true
+  - task: Pester@0
+    displayName: "Test Template validity against Azure"
     inputs:
       scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='$(azure_resource_group_name)'}}"
       resultsFile: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
       usePSCore: true
       run32Bit: False
+  - task: PublishTestResults@2
+    displayName: "Publish result (2)"
+    inputs:
+      testResultsFormat: "NUnit"
+      testResultsFiles: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
+      failTaskOnFailedTests: true
+  - task: PowerShell@2
+    displayName: "Create Resource Group"
+    inputs:
+      targetType: "inline"
+      script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
   - task: AzureResourceManagerTemplateDeployment@3
+    displayName: "Apply ARM Template"
     inputs:
       deploymentScope: "Resource Group"
       azureResourceManagerConnection: "ARM"
@@ -55,19 +75,9 @@ steps:
       resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
       usePSCore: true
       run32Bit: False
-  - task: PowerShell@2
-    displayName: "Get contents of $(azure_resource_group_name)"
-    inputs:
-      targetType: "inline"
-      script: Get-AzResourceGroup -Name $(azure_resource_group_name) 
   - task: PublishTestResults@2
+    displayName: "Publish result (3)"
     inputs:
       testResultsFormat: "NUnit"
       testResultsFiles: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
-      failTaskOnFailedTests: true
-
-  - task: PublishTestResults@2
-    inputs:
-      testResultsFormat: "NUnit"
-      testResultsFiles: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
       failTaskOnFailedTests: true
