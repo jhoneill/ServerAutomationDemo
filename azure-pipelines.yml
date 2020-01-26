@@ -3,19 +3,18 @@ trigger:
     include:
       - master
 
-variables:
-  - group: ServerAutomationDemo
-  - name: azure_resource_group_name
-    value: "ServerProvisionTesting-$(Build.BuildId)"
-  - name: subscription_id
-    value: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
-  - name: application_id
-    value: "8ce2d5ed-2d10-4dd0-a703-c380c8e15500"
-  - name: tenant_id
-    value: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
-
 stages:
   - stage: Validate
+    variables:
+    - group: ServerAutomationDemo
+    - name: azure_resource_group_name
+      value: "ServerProvisionTesting-$(Build.BuildId)"
+    - name: subscription_id
+      value: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
+    - name: application_id
+      value: "8ce2d5ed-2d10-4dd0-a703-c380c8e15500"
+    - name: tenant_id
+      value: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
     pool:
       vmImage: "ubuntu-latest"
     jobs:
@@ -55,6 +54,16 @@ stages:
               failTaskOnFailedTests: true
   - stage: Deploy_to_demo_env
     dependsOn: Validate
+    variables:
+      - group: ServerAutomationDemo
+      - name: azure_resource_group_name
+        value: "ServerProvisionTesting-$(Build.BuildId)"
+      - name: subscription_id
+        value: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
+      - name: application_id
+        value: "8ce2d5ed-2d10-4dd0-a703-c380c8e15500"
+      - name: tenant_id
+        value: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
     pool:
       vmImage: "ubuntu-latest"
     jobs:
@@ -98,14 +107,15 @@ stages:
                     resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
                     usePSCore: true
                     run32Bit: False
-                - task: PowerShell@2
-                  displayName: "Get contents of $(azure_resource_group_name)"
-                  inputs:
-                    targetType: "inline"
-                    script: Get-AzResourceGroup -Name $(azure_resource_group_name)
                 - task: PublishTestResults@2
                   displayName: "Publish deployment results"
                   inputs:
                     testResultsFormat: "NUnit"
                     testResultsFiles: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
                     failTaskOnFailedTests: true
+                - task: PowerShell@2
+                  displayName: "Post Installation steps"
+                  inputs:
+                    targetType: filePath
+                    filePath: "config-vm.ps1"
+                    arguments: "-rgname $(azure_resource_group_name)"
