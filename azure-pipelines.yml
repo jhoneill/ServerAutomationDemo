@@ -15,7 +15,7 @@ variables:
     value: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
 
 stages:
-  - stage: validate_and_deploy
+  - stage: Validate
     pool:
       vmImage: "ubuntu-latest"
     jobs:
@@ -26,7 +26,7 @@ stages:
             displayName: "Connect to Azure"
             inputs:
               filePath: "connect-azure.ps1"
-              arguments: '-ServicePrincipalPassword "$(ServerAutomationDemo-AppPw)" -SubscriptionId $(subscription_id) -ApplicationId $(application_id) -TenantId $(tenant_id)'
+              arguments: '-ServicePrincipalPassword (ConvertTo-SecureString -AsPlainText -Force  "$(ServerAutomationDemo-AppPw)")'
           - task: Pester@0
             displayName: "Check Template syntax"
             inputs:
@@ -53,9 +53,13 @@ stages:
               testResultsFormat: "NUnit"
               testResultsFiles: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
               failTaskOnFailedTests: true
+  - stage: Deploy_to_demo_env
+    dependsOn: Validate
+    pool:
+      vmImage: "ubuntu-latest"
+    jobs:
       - deployment: "Deploy"
         displayName: 'Deploy Resource Group'
-        dependsOn: vt
         environment:
           name: demo
         strategy:
@@ -68,7 +72,7 @@ stages:
                   displayName: "Connect to Azure"
                   inputs:
                     filePath: "connect-azure.ps1"
-                    arguments: '-ServicePrincipalPassword "$(ServerAutomationDemo-AppPw)" -SubscriptionId $(subscription_id) -ApplicationId $(application_id) -TenantId $(tenant_id)'
+                    arguments: '-ServicePrincipalPassword (ConvertTo-SecureString -AsPlainText -Force  "$(ServerAutomationDemo-AppPw)")'
                 - task: PowerShell@2
                   displayName: "Create Resource Group '$(azure_resource_group_name)'"
                   inputs:

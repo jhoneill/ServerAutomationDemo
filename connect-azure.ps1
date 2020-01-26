@@ -2,32 +2,24 @@
 param (
     [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
-    [string]$ServicePrincipalPassword,
+    [SecureString]$ServicePrincipalPassword,
 
-    [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
-    [string]$SubscriptionId,
+    [string]$Subscription = $env:SUBSCRIPTION_ID,
 
-    [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
-    [string]$ApplicationId,
+    [string]$ApplicationId = $env:APPLICATION_ID,
 
-    [Parameter(Mandatory)]
     [ValidateNotNullOrEmpty()]
-    [string]$TenantId
+    [string]$Tenant = $env:TENANT_ID
 )
-Get-ChildItem Env:\ | Format-Table -AutoSize
-$PSBoundParameters
 
-Install-Module -Name Az.Accounts, Az.Resources -Force -SkipPublisherCheck
+Get-Command az -ErrorAction SilentlyContinue
 
-$password = ConvertTo-SecureString $ServicePrincipalPassword -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential ($ApplicationId, $password)
+if (-not (Get-Module -ListAvailable Az.Accounts )) {Install-Module -Name Az.Accounts  -Force -SkipPublisherCheck}
+if (-not (Get-Module -ListAvailable Az.Resources)) {Install-Module -Name Az.Resources -Force -SkipPublisherCheck}
 
-$connectAzParams = @{
-    ServicePrincipal = $true
-    SubscriptionId   = $SubscriptionId
-    Tenant           = $TenantId
-    Credential       = $credential
-}
-Connect-AzAccount @connectAzParams
+#$password   = ConvertTo-SecureString $ServicePrincipalPassword -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential ($ApplicationId, $ServicePrincipalPassword)
+
+Connect-AzAccount -ServicePrincipal -Subscription $Subscription -Tenant $Tenant -Credential $credential
