@@ -27,55 +27,34 @@ stages:
             inputs:
               filePath: "connect-azure.ps1"
               arguments: '-ServicePrincipalPassword "$(ServerAutomationDemo-AppPw)" -SubscriptionId $(subscription_id) -ApplicationId $(application_id) -TenantId $(tenant_id)'
-          - task: PowerShell@2
-            displayName: "Create Resource Group '$(azure_resource_group_name)'"
-            inputs:
-              targetType: "inline"
-              script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
           - task: Pester@0
-            displayName: "Test Valid template"
+            displayName: "Check Template syntax"
+            inputs:
+              scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/jsonValidation.tests.ps1'; Parameters=@{TemplatePath='.\\server.json'}}"
+              resultsFile: "$(System.DefaultWorkingDirectory)/jsonValidation.tests.XML"
+              usePSCore: true
+              run32Bit: False
+          - task: PublishTestResults@2
+            displayName: "Publish result (1)"
+            inputs:
+              testResultsFormat: "NUnit"
+              testResultsFiles: "$(System.DefaultWorkingDirectory)/jsonValidation.tests.XML"
+              failTaskOnFailedTests: true
+          - task: Pester@0
+            displayName: "Test Template validity against Azure"
             inputs:
               scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='$(azure_resource_group_name)'}}"
               resultsFile: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
               usePSCore: true
               run32Bit: False
-          - task: AzureResourceManagerTemplateDeployment@3
-            inputs:
-              deploymentScope: "Resource Group"
-              azureResourceManagerConnection: "ARM"
-              subscriptionId: "$(subscription_id)"
-              action: "Create Or Update Resource Group"
-              resourceGroupName: $(azure_resource_group_name)
-              location: "UK South"
-              templateLocation: "Linked artifact"
-              csmFile: "server.json"
-              csmParametersFile: "server.parameters.json"
-              deploymentMode: "Incremental"
-              deploymentOutputs: "arm_output"
-          - task: Pester@0
-            displayName: "Test Deployment results"
-            inputs:
-              scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{ArmDeploymentJsonOutput='$(arm_output)'}}"
-              resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
-              usePSCore: true
-              run32Bit: False
-          - task: PowerShell@2
-            displayName: "Get contents of $(azure_resource_group_name)"
-            inputs:
-              targetType: "inline"
-              script: Get-AzResourceGroup -Name $(azure_resource_group_name)
           - task: PublishTestResults@2
-            inputs:
-              testResultsFormat: "NUnit"
-              testResultsFiles: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
-              failTaskOnFailedTests: true
-
-          - task: PublishTestResults@2
+            displayName: "Publish result (2)"
             inputs:
               testResultsFormat: "NUnit"
               testResultsFiles: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
               failTaskOnFailedTests: true
-      - deployment:
+      - deployment: "Deploy"
+        displayName: 'Deploy Resource Group'
         dependsOn: vt
         environment:
           name: demo
@@ -83,8 +62,46 @@ stages:
           runOnce:
             deploy:
               steps:
+                - checkout: self
+                  displayName: "Download Repo"
                 - task: PowerShell@2
-                  displayName: "PS Task"
+                  displayName: "Connect to Azure"
                   inputs:
-                    targetType: inline
-                    script: 'Write-output "ran this"'
+                    filePath: "connect-azure.ps1"
+                    arguments: '-ServicePrincipalPassword "$(ServerAutomationDemo-AppPw)" -SubscriptionId $(subscription_id) -ApplicationId $(application_id) -TenantId $(tenant_id)'
+                - task: PowerShell@2
+                  displayName: "Create Resource Group '$(azure_resource_group_name)'"
+                  inputs:
+                    targetType: "inline"
+                    script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
+                - task: AzureResourceManagerTemplateDeployment@3
+                  inputs:
+                    deploymentScope: "Resource Group"
+                    azureResourceManagerConnection: "ARM"
+                    subscriptionId: "$(subscription_id)"
+                    action: "Create Or Update Resource Group"
+                    resourceGroupName: $(azure_resource_group_name)
+                    location: "UK South"
+                    templateLocation: "Linked artifact"
+                    csmFile: "server.json"
+                    csmParametersFile: "server.parameters.json"
+                    deploymentMode: "Incremental"
+                    deploymentOutputs: "arm_output"
+                - task: Pester@0
+                  displayName: "Test Deployment results"
+                  inputs:
+                    scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{ArmDeploymentJsonOutput='$(arm_output)'}}"
+                    resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
+                    usePSCore: true
+                    run32Bit: False
+                - task: PowerShell@2
+                  displayName: "Get contents of $(azure_resource_group_name)"
+                  inputs:
+                    targetType: "inline"
+                    script: Get-AzResourceGroup -Name $(azure_resource_group_name)
+                - task: PublishTestResults@2
+                  displayName: "Publish deployment results"
+                  inputs:
+                    testResultsFormat: "NUnit"
+                    testResultsFiles: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
+                    failTaskOnFailedTests: true
