@@ -16,6 +16,8 @@ param (
     [ValidateNotNullOrEmpty()]
     [string]$TenantId
 )
+Get-ChildItem Env:\ | Format-Table -AutoSize
+$PSBoundParameters
 
 Install-Module -Name Az.Accounts, Az.Resources -Force -SkipPublisherCheck
 
