@@ -1,11 +1,12 @@
 parameters:
-  azure_resource_group_name: 
-  subscription_id: 
-  application_id: 
-  tenant_id: 
-  variableGroup: 
-  dependOn: 
+  variableGroup:
+  subscription_id:
+  application_id:
+  tenant_id:
+  location:
+  azure_resource_group_name:
   environment:
+  dependOn:
 
 stages:
   - stage: Deploy
@@ -47,7 +48,7 @@ stages:
                 displayName: "Create Resource Group"
                 inputs:
                   targetType: "inline"
-                  script: 'New-AzResourceGroup -Name "${{ parameters.azure_resource_group_name }}" -Location uksouth -Force'
+                  script: 'New-AzResourceGroup -Name "${{ parameters.azure_resource_group_name }}" -Location "${{ parameters.location }}" -Force'
               - task: AzureResourceManagerTemplateDeployment@3
                 inputs:
                   deploymentScope: "Resource Group"
@@ -55,46 +56,34 @@ stages:
                   subscriptionId: ${{ parameters.subscription_id }}
                   action: "Create Or Update Resource Group"
                   resourceGroupName: ${{ parameters.azure_resource_group_name }}
-                  location: "UK South"
+                  location: ${{ parameters.location }}
                   templateLocation: "Linked artifact"
                   csmFile: "server.json"
                   csmParametersFile: "server.parameters.json"
                   deploymentMode: "Incremental"
                   deploymentOutputs: "arm_output"
-              - task: Pester@0
-                displayName: "Test Deployment results"
-                inputs:
-                  scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{ArmDeploymentJsonOutput='$(arm_output)'}}"
-                  resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
-                  usePSCore: true
-                  run32Bit: False
-              - task: PublishTestResults@2
-                displayName: "Publish deployment results"
-                inputs:
-                  testResultsFormat: "NUnit"
-                  testResultsFiles: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
-                  failTaskOnFailedTests: true
               - task: PowerShell@2
                 displayName: "Post Installation steps"
                 inputs:
                   targetType: filePath
                   filePath: "config-vm.ps1"
                   arguments: '-rgname "${{ parameters.azure_resource_group_name }}"'
-              - task: PublishPipelineArtifact@1
-                inputs:
-                  targetPath: '$(Build.ArtifactStagingDirectory)/results'
-                  artifact: '${{ parameters.environment }} Results'
               - task: Pester@0
                 displayName: "Final Deployment results"
+                continueOnError: true
                 inputs:
-                  scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/2server.infrastructure.tests.ps1'; Parameters=@{RGName='${{ parameters.azure_resource_group_name }}'; Subscription='${{ parameters.subscription_id }}'}}"
-                  resultsFile: "$(System.DefaultWorkingDirectory)/2server.infrastructure.tests.XML"
+                  scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{RGName='${{ parameters.azure_resource_group_name }}'; Subscription='${{ parameters.subscription_id }}'}}"
+                  resultsFile: "$(Build.ArtifactStagingDirectory)/results/server.infrastructure.tests.XML"
                   usePSCore: true
                   run32Bit: False
               - task: PublishTestResults@2
                 displayName: "Publish final deployment results"
+                condition: always()
                 inputs:
                   testResultsFormat: "NUnit"
-                  testResultsFiles: "$(System.DefaultWorkingDirectory)/2server.infrastructure.tests.XML"
+                  testResultsFiles: "$(Build.ArtifactStagingDirectory)/results/server.infrastructure.tests.XML"
                   failTaskOnFailedTests: true
-             
+              - task: PublishPipelineArtifact@1
+                inputs:
+                  targetPath: '$(Build.ArtifactStagingDirectory)/results'
+                  artifact: '${{ parameters.environment }} Results'

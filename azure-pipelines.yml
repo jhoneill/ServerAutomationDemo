@@ -33,3 +33,4 @@ stages:
       variableGroup: ServerAutomationDemo
       dependOn: Validate
       environment: demo
+      location: UKSouth

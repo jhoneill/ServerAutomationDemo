@@ -98,16 +98,14 @@ Remove-Item   -Path  .\remote.ps1
 
 $resultDir    = Join-Path      -Path $env:BUILD_ARTIFACTSTAGINGDIRECTORY -ChildPath "results"
 if (-not       (Test-Path      -Path $resultDir -PathType Container )) {
-                 New-Item      -Path $resultDir -ItemType Directory 
+                 New-Item      -Path $resultDir -ItemType Directory
 }
 $XmlPath      = Join-Path      -Path $resultDir -ChildPath 'remoteResult.xml'
 Export-Clixml -Depth 5         -Path $XmlPath   -InputObject $remoteResult
 
 $textPath     = Join-Path      -Path $resultDir  -ChildPath 'vm_and_rg.txt'
-$rg             | Out-file -FilePath $textPath 
+$rg             | Out-file -FilePath $textPath
 $vm             | Out-file -FilePath $textPath   -Append
 $env:ARM_OUTPUT | Out-file -FilePath $textPath   -Append
 $XmlPath     = Join-Path       -Path $resultDir  -ChildPath 'vm.xml'
 Export-Clixml -Depth 5         -Path $XmlPath    -InputObject $vm
-
-Stop-AzVm -ResourceGroupName $rgname -Name $vmname -Force -NoWait
