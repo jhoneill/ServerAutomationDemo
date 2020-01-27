@@ -5,27 +5,12 @@ trigger:
 
 stages:
   - stage: Validate
-    variables:
-    - group: ServerAutomationDemo
-    - name: azure_resource_group_name
-      value: "ServerProvisionTesting-$(Build.BuildId)"
-    - name: subscription_id
-      value: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
-    - name: application_id
-      value: "8ce2d5ed-2d10-4dd0-a703-c380c8e15500"
-    - name: tenant_id
-      value: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
     pool:
       vmImage: "ubuntu-latest"
     jobs:
       - job: vt
         displayName: "Validate template"
         steps:
-          - task: PowerShell@2
-            displayName: "Connect to Azure"
-            inputs:
-              filePath: "connect-azure.ps1"
-              arguments: '-ServicePrincipalPassword (ConvertTo-SecureString -AsPlainText -Force  "$(ServerAutomationDemo-AppPw)")'
           - task: Pester@0
             displayName: "Check Template syntax"
             inputs:
@@ -34,88 +19,17 @@ stages:
               usePSCore: true
               run32Bit: False
           - task: PublishTestResults@2
-            displayName: "Publish result (1)"
+            displayName: "Publish syntax check result"
             inputs:
               testResultsFormat: "NUnit"
               testResultsFiles: "$(System.DefaultWorkingDirectory)/jsonValidation.tests.XML"
               failTaskOnFailedTests: true
-          - task: Pester@0
-            displayName: "Test Template validity against Azure"
-            inputs:
-              scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='$(azure_resource_group_name)'}}"
-              resultsFile: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
-              usePSCore: true
-              run32Bit: False
-          - task: PublishTestResults@2
-            displayName: "Publish result (2)"
-            inputs:
-              testResultsFormat: "NUnit"
-              testResultsFiles: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
-              failTaskOnFailedTests: true
-  - stage: Deploy_to_demo_env
-    dependsOn: Validate
-    variables:
-      - group: ServerAutomationDemo
-      - name: azure_resource_group_name
-        value: "ServerProvisionTesting-$(Build.BuildId)"
-      - name: subscription_id
-        value: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
-      - name: application_id
-        value: "8ce2d5ed-2d10-4dd0-a703-c380c8e15500"
-      - name: tenant_id
-        value: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
-    pool:
-      vmImage: "ubuntu-latest"
-    jobs:
-      - deployment: "Deploy"
-        displayName: 'Deploy Resource Group'
-        environment:
-          name: demo
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - checkout: self
-                  displayName: "Download Repo"
-                - task: PowerShell@2
-                  displayName: "Connect to Azure"
-                  inputs:
-                    filePath: "connect-azure.ps1"
-                    arguments: '-ServicePrincipalPassword (ConvertTo-SecureString -AsPlainText -Force  "$(ServerAutomationDemo-AppPw)")'
-                - task: PowerShell@2
-                  displayName: "Create Resource Group '$(azure_resource_group_name)'"
-                  inputs:
-                    targetType: "inline"
-                    script: New-AzResourceGroup -Name $(azure_resource_group_name) -Location uksouth -Force
-                - task: AzureResourceManagerTemplateDeployment@3
-                  inputs:
-                    deploymentScope: "Resource Group"
-                    azureResourceManagerConnection: "ARM"
-                    subscriptionId: "$(subscription_id)"
-                    action: "Create Or Update Resource Group"
-                    resourceGroupName: $(azure_resource_group_name)
-                    location: "UK South"
-                    templateLocation: "Linked artifact"
-                    csmFile: "server.json"
-                    csmParametersFile: "server.parameters.json"
-                    deploymentMode: "Incremental"
-                    deploymentOutputs: "arm_output"
-                - task: Pester@0
-                  displayName: "Test Deployment results"
-                  inputs:
-                    scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{ArmDeploymentJsonOutput='$(arm_output)'}}"
-                    resultsFile: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
-                    usePSCore: true
-                    run32Bit: False
-                - task: PublishTestResults@2
-                  displayName: "Publish deployment results"
-                  inputs:
-                    testResultsFormat: "NUnit"
-                    testResultsFiles: "$(System.DefaultWorkingDirectory)/server.infrastructure.tests.XML"
-                    failTaskOnFailedTests: true
-                - task: PowerShell@2
-                  displayName: "Post Installation steps"
-                  inputs:
-                    targetType: filePath
-                    filePath: "config-vm.ps1"
-                    arguments: "-rgname $(azure_resource_group_name)"
+  - template: deployment.template.yml
+    parameters:
+      azure_resource_group_name:  "ServerProvisionTesting-$(Build.BuildId)"
+      subscription_id: "007104fc-5081-48d6-a1ff-aa2e24a50f69"
+      application_id: "8ce2d5ed-2d10-4dd0-a703-c380c8e15500"
+      tenant_id: "e6af5578-6d03-49e0-af3b-383cf5ec0b5f"
+      variableGroup: ServerAutomationDemo
+      dependOn: Validate
+      environment: demo
