@@ -1,23 +1,21 @@
 parameters:
   variableGroup:
-  subscription_id:
-  application_id:
-  tenant_id:
   location:
   azure_resource_group_name:
   environment:
   dependOn:
 
 stages:
-  - stage: Deploy
+  - stage: 'Deploy${{ parameters.environment }}'
+    displayName: 'Deploy to ${{ parameters.environment }}'
     dependsOn: ${{ parameters.dependOn }}
     variables:
       - group: ${{ parameters.variableGroup }}
     pool:
       vmImage: "ubuntu-latest"
     jobs:
-    - deployment: "Deploy"
-      displayName: 'Deploy Resource Group'
+    - deployment: "DeployToAzRG"
+      displayName: 'Deploy to RG ${{ parameters.azure_resource_group_name }}'
       environment:
         name: ${{ parameters.environment }}
       strategy:
@@ -30,11 +28,11 @@ stages:
                 displayName: "Connect to Azure"
                 inputs:
                   filePath: "connect-azure.ps1"
-                  arguments: '-ServicePrincipalPassword (ConvertTo-SecureString -AsPlainText -Force  "$(ServerAutomationDemo-AppPw)") -Subscription "${{ parameters.subscription_id }}" -ApplicationId ${{ parameters.application_id }} -Tenant ${{ parameters.tenant_id }} '
+                  arguments: '-ServicePrincipalPassword (ConvertTo-SecureString -AsPlainText -Force  "$(ServerAutomationDemo-AppPw)") -Subscription "$(subscriptionid)" -ApplicationId "$(applicationid)" -Tenant "$(tenantid)" '
               - task: Pester@0
                 displayName: "Test Template validity against Azure"
                 inputs:
-                  scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='$(azure_resource_group_name)'}}"
+                  scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.template.tests.ps1'; Parameters=@{ResourceGroupName='${{ parameters.azure_resource_group_name }}'}}"
                   resultsFile: "$(System.DefaultWorkingDirectory)/server.template.tests.XML"
                   usePSCore: true
                   run32Bit: False
@@ -53,7 +51,7 @@ stages:
                 inputs:
                   deploymentScope: "Resource Group"
                   azureResourceManagerConnection: "ARM"
-                  subscriptionId: ${{ parameters.subscription_id }}
+                  subscriptionId: "$(subscriptionid)"
                   action: "Create Or Update Resource Group"
                   resourceGroupName: ${{ parameters.azure_resource_group_name }}
                   location: ${{ parameters.location }}
@@ -72,7 +70,7 @@ stages:
                 displayName: "Final Deployment results"
                 continueOnError: true
                 inputs:
-                  scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{RGName='${{ parameters.azure_resource_group_name }}'; Subscription='${{ parameters.subscription_id }}'}}"
+                  scriptFolder: "@{Path='$(System.DefaultWorkingDirectory)/server.infrastructure.tests.ps1'; Parameters=@{RGName='${{ parameters.azure_resource_group_name }}'; Subscription='$(subscriptionid)'}}"
                   resultsFile: "$(Build.ArtifactStagingDirectory)/results/server.infrastructure.tests.XML"
                   usePSCore: true
                   run32Bit: False
