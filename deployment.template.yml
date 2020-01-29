@@ -15,7 +15,7 @@ stages:
       vmImage: "ubuntu-latest"
     jobs:
     - deployment: "DeployToAzRG"
-      displayName: 'Deploy to RG ${{ parameters.azure_resource_group_name }}'
+      displayName: 'Deploy to RG'
       environment:
         name: ${{ parameters.environment }}
       strategy:

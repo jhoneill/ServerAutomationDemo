@@ -11,6 +11,12 @@ stages:
       - job: vt
         displayName: "Validate template"
         steps:
+          - task: PowerShell@2
+            env:
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+            inputs:
+              targetType: inline
+              script: 'dir env: | ft -AutoSize -wrap | out-string -Width 180 ; $(System.DefaultWorkingDirectory)/TagCommit.ps1'
           - task: Pester@0
             displayName: "Check Template syntax"
             inputs:
